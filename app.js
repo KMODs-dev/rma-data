@@ -7,20 +7,21 @@ async function carregarDados() {
 
   const headers = { 'X-Auth-Token': API_KEY };
 
-  // 1. CARREGAR ELENCO E JOGADORES
+  // 1. CARREGAR ELENCO E JOGADORES (usando CorsProxy para liberar a requisição no navegador)
   try {
-    const resElenco = await fetch(`https://api.football-data.org/v4/teams/${TEAM_ID}`, { headers });
+    const urlElenco = `https://corsproxy.io/?${encodeURIComponent(`https://api.football-data.org/v4/teams/${TEAM_ID}`)}`;
+    const resElenco = await fetch(urlElenco, { headers });
     const dadosElenco = await resElenco.json();
 
-    if (dadosElenco.squad) {
+    if (dadosElenco.squad && dadosElenco.squad.length > 0) {
       containerJogadores.innerHTML = "";
 
       dadosElenco.squad.forEach(jogador => {
         // Calcula a idade do jogador
-        const anoNascimento = new Date(jogador.dateOfBirth).getFullYear();
+        const anoNascimento = jogador.dateOfBirth ? new Date(jogador.dateOfBirth).getFullYear() : 2000;
         const idade = new Date().getFullYear() - anoNascimento;
 
-        // Foto padrão (já que a API gratuita não retorna foto de cada jogador)
+        // Foto padrão
         const fotoPadrao = 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=300&q=80';
 
         containerJogadores.innerHTML += `
@@ -32,11 +33,13 @@ async function carregarDados() {
             <img src="${fotoPadrao}" class="player-img" alt="${jogador.name}">
             <div class="card-body">
               <h3>${jogador.name}</h3>
-              <p class="country">${jogador.nationality} • ${idade} anos</p>
+              <p class="country">${jogador.nationality || 'Internacional'} • ${idade} anos</p>
             </div>
           </div>
         `;
       });
+    } else {
+      containerJogadores.innerHTML = "<p>Nenhum jogador encontrado no elenco.</p>";
     }
   } catch (error) {
     console.error("Erro ao buscar elenco:", error);
@@ -45,7 +48,8 @@ async function carregarDados() {
 
   // 2. CARREGAR PRÓXIMAS PARTIDAS
   try {
-    const resPartidas = await fetch(`https://api.football-data.org/v4/teams/${TEAM_ID}/matches?status=SCHEDULED&limit=5`, { headers });
+    const urlPartidas = `https://corsproxy.io/?${encodeURIComponent(`https://api.football-data.org/v4/teams/${TEAM_ID}/matches?status=SCHEDULED&limit=5`)}`;
+    const resPartidas = await fetch(urlPartidas, { headers });
     const dadosPartidas = await resPartidas.json();
 
     if (dadosPartidas.matches && dadosPartidas.matches.length > 0) {
