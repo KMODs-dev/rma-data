@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real Madrid - Banco de Dados</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo">REAL MADRID CF</div>
+    <nav class="nav">
+      <a href="#" class="active">Elenco</a>
+      <a href="#">Partidas</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Banco de Dados Oficial dos Fãs</h1>
+      <p>Estatísticas, jogadores e informações atualizadas em tempo real.</p>
+    </section>
+
+    <!-- Seção do Elenco -->
+    <section class="section">
+      <h2>Elenco Atual</h2>
+      <div class="cards-grid" id="jogadores-grid">
+        <p>Carregando jogadores da API...</p>
+      </div>
+    </section>
+
+    <!-- Seção de Partidas -->
+    <section class="section" style="margin-top: 40px;">
+      <h2>Próximas Partidas</h2>
+      <div class="cards-grid" id="partidas-grid">
+        <p>Carregando partidas da API...</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
