@@ -1,74 +1,65 @@
-const API_KEY = '44d0e520c0d14303bff117bd7b2062c4'; // Cole sua chave do football-data.org aqui
-const TEAM_ID = 86; // ID do Real Madrid no Football-Data
+// ID do Real Madrid na API TheSportsDB
+const TEAM_ID = "133738";
 
 async function carregarDados() {
   const containerJogadores = document.getElementById("jogadores-grid");
   const containerPartidas = document.getElementById("partidas-grid");
 
-  const headers = { 'X-Auth-Token': API_KEY };
-
-  // 1. CARREGAR ELENCO E JOGADORES (usando CorsProxy para liberar a requisição no navegador)
+  // 1. BUSCAR ELENCO REAL DO REAL MADRID
   try {
-    const urlElenco = `https://corsproxy.io/?${encodeURIComponent(`https://api.football-data.org/v4/teams/${TEAM_ID}`)}`;
-    const resElenco = await fetch(urlElenco, { headers });
+    const resElenco = await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookup_all_players.php?id=${TEAM_ID}`);
     const dadosElenco = await resElenco.json();
 
-    if (dadosElenco.squad && dadosElenco.squad.length > 0) {
+    if (dadosElenco.player && dadosElenco.player.length > 0) {
       containerJogadores.innerHTML = "";
 
-      dadosElenco.squad.forEach(jogador => {
-        // Calcula a idade do jogador
-        const anoNascimento = jogador.dateOfBirth ? new Date(jogador.dateOfBirth).getFullYear() : 2000;
-        const idade = new Date().getFullYear() - anoNascimento;
-
-        // Foto padrão
-        const fotoPadrao = 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=300&q=80';
+      dadosElenco.player.forEach(jogador => {
+        // Usa a foto do jogador ou uma imagem genérica caso não tenha
+        const foto = jogador.strCutout || jogador.strThumb || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=300&q=80';
+        const posicao = traduzirPosicao(jogador.strPosition);
+        const numero = jogador.strNumber ? `#${jogador.strNumber}` : '-';
 
         containerJogadores.innerHTML += `
           <div class="card">
             <div class="card-header">
-              <span class="number">#</span>
-              <span class="position">${traduzirPosicao(jogador.position)}</span>
+              <span class="number">${numero}</span>
+              <span class="position">${posicao}</span>
             </div>
-            <img src="${fotoPadrao}" class="player-img" alt="${jogador.name}">
+            <img src="${foto}" class="player-img" alt="${jogador.strPlayer}" style="object-fit: contain; background: #1a2332;">
             <div class="card-body">
-              <h3>${jogador.name}</h3>
-              <p class="country">${jogador.nationality || 'Internacional'} • ${idade} anos</p>
+              <h3>${jogador.strPlayer}</h3>
+              <p class="country">${jogador.strNationality || 'Internacional'}</p>
+              <div class="stats" style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.8rem; color:#e5b324; background:#141b27; padding:5px 8px; border-radius:4px;">
+                <span>📍 ${jogador.strHeight || 'N/A'}</span>
+                <span>⚽ ${jogador.strTeam}</span>
+              </div>
             </div>
           </div>
         `;
       });
     } else {
-      containerJogadores.innerHTML = "<p>Nenhum jogador encontrado no elenco.</p>";
+      containerJogadores.innerHTML = "<p>Nenhum jogador encontrado.</p>";
     }
   } catch (error) {
-    console.error("Erro ao buscar elenco:", error);
-    containerJogadores.innerHTML = "<p>Erro ao carregar o elenco do Real Madrid.</p>";
+    console.error("Erro ao carregar elenco:", error);
+    containerJogadores.innerHTML = "<p>Erro ao conectar com a API de jogadores.</p>";
   }
 
-  // 2. CARREGAR PRÓXIMAS PARTIDAS
+  // 2. BUSCAR PRÓXIMAS PARTIDAS DO REAL MADRID
   try {
-    const urlPartidas = `https://corsproxy.io/?${encodeURIComponent(`https://api.football-data.org/v4/teams/${TEAM_ID}/matches?status=SCHEDULED&limit=5`)}`;
-    const resPartidas = await fetch(urlPartidas, { headers });
+    const resPartidas = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=${TEAM_ID}`);
     const dadosPartidas = await resPartidas.json();
 
-    if (dadosPartidas.matches && dadosPartidas.matches.length > 0) {
+    if (dadosPartidas.events && dadosPartidas.events.length > 0) {
       containerPartidas.innerHTML = "";
 
-      dadosPartidas.matches.forEach(partida => {
-        const dataFormatada = new Date(partida.utcDate).toLocaleDateString('pt-BR', {
-          day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'
-        });
-
-        const timeCasa = partida.homeTeam.name;
-        const timeFora = partida.awayTeam.name;
-        const competicao = partida.competition.name;
-
+      dadosPartidas.events.forEach(partida => {
         containerPartidas.innerHTML += `
           <div class="card" style="padding: 15px; text-align: center;">
-            <p style="color: #e5b324; font-size: 0.8rem; margin-bottom: 5px;">🏆 ${competicao}</p>
-            <h3 style="margin-bottom: 10px; font-size: 1rem;">${timeCasa} <br><span style="color:#e5b324;">VS</span><br> ${timeFora}</h3>
-            <p style="color: #a0aec0; font-size: 0.85rem;">📅 ${dataFormatada}</p>
+            <p style="color: #e5b324; font-size: 0.8rem; margin-bottom: 5px;">🏆 ${partida.strLeague}</p>
+            <h3 style="margin-bottom: 10px; font-size: 1rem;">${partida.strHomeTeam} <br><span style="color:#e5b324;">VS</span><br> ${partida.strAwayTeam}</h3>
+            <p style="color: #a0aec0; font-size: 0.85rem;">📅 ${partida.dateEvent} às ${partida.strTime || '16:00'}</p>
+            <p style="color: #a0aec0; font-size: 0.85rem;">🏟️ ${partida.strVenue || 'Estádio'}</p>
           </div>
         `;
       });
@@ -76,20 +67,19 @@ async function carregarDados() {
       containerPartidas.innerHTML = "<p>Nenhuma partida agendada encontrada no momento.</p>";
     }
   } catch (error) {
-    console.error("Erro ao buscar partidas:", error);
-    containerPartidas.innerHTML = "<p>Erro ao carregar próximas partidas.</p>";
+    console.error("Erro ao carregar partidas:", error);
+    containerPartidas.innerHTML = "<p>Erro ao conectar com a API de partidas.</p>";
   }
 }
 
-// Função para traduzir as posições da API que vêm em inglês
+// Função para traduzir as posições em inglês
 function traduzirPosicao(posicao) {
-  switch (posicao) {
-    case 'Goalkeeper': return 'Goleiro';
-    case 'Defence': return 'Defensor';
-    case 'Midfield': return 'Meio-Campista';
-    case 'Offence': return 'Atacante';
-    default: return 'Jogador';
-  }
+  if (!posicao) return 'Jogador';
+  if (posicao.includes('Goalkeeper')) return 'Goleiro';
+  if (posicao.includes('Defender') || posicao.includes('Back')) return 'Defensor';
+  if (posicao.includes('Midfield')) return 'Meio-Campista';
+  if (posicao.includes('Forward') || posicao.includes('Winger') || posicao.includes('Striker')) return 'Atacante';
+  return posicao;
 }
 
 document.addEventListener("DOMContentLoaded", carregarDados);
