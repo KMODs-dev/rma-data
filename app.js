@@ -1,6 +1,6 @@
 const API_KEY = "49db2cc8a1837ae6780e02e8faf78b83"; // Cole sua chave do API-Sports aqui
 const TEAM_ID = 541; // ID do Real Madrid
-const SEASON = 2026-2027; // Temporada atual
+const SEASON = 2026; // Temporada atual
 
 // Armazena dados dos jogadores localmente para reuso no Modal
 let jogadoresMemoria = [];
