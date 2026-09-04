@@ -205,37 +205,52 @@ function abrirPlayerCustom(caminhoEmbed, titulo) {
   if (!modal) {
     modal = document.createElement("div");
     modal.id = "modal-player";
-    modal.style.cssText = `
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.95); display: flex; justify-content: center;
-      align-items: center; z-index: 2000; padding: 10px;
-    `;
     document.body.appendChild(modal);
   }
+
+  // Estilo ocupando 100% de largura e altura da tela
+  modal.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #000; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; z-index: 9999;
+  `;
 
   const playerUrl = `${SUPERFLIX_URL}/${caminhoEmbed}`;
 
   modal.innerHTML = `
-    <div style="background: #141414; border-radius: 8px; width: 100%; max-width: 900px; padding: 15px; position: relative; border: 1px solid #333;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h3 style="color: #E50914; font-size: 1rem;">🎬 ${titulo}</h3>
-        <button onclick="fecharPlayer()" style="background: #E50914; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Sair X</button>
-      </div>
+    <!-- Barra Superior Flutuante -->
+    <div style="position: absolute; top: 10px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10000; pointer-events: auto;">
+      <h3 style="color: #fff; font-size: 0.9rem; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 4px;">🎬 ${titulo}</h3>
+      <button onclick="fecharPlayer()" style="background: #E50914; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">Sair X</button>
+    </div>
 
-      <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 4px; background: #000;">
-        <iframe 
-          id="iframe-player"
-          src="${playerUrl}" 
-          style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" 
-          allowfullscreen 
-          sandbox="allow-scripts allow-same-origin allow-forms"
-          scrolling="no">
-        </iframe>
-      </div>
+    <!-- Container do Vídeo em 100% -->
+    <div style="width: 100%; height: 100%; position: relative; background: #000;">
+      <iframe 
+        id="iframe-player"
+        src="${playerUrl}" 
+        style="width: 100%; height: 100%; border: none;" 
+        allow="autoplay; fullscreen"
+        allowfullscreen 
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        scrolling="no">
+      </iframe>
     </div>
   `;
 
   modal.style.display = "flex";
+
+  // 1. Tenta colocar o modal em Tela Cheia no navegador
+  if (modal.requestFullscreen) {
+    modal.requestFullscreen().catch(() => {});
+  } else if (modal.webkitRequestFullscreen) {
+    modal.webkitRequestFullscreen();
+  }
+
+  // 2. Trava a orientação da tela na horizontal (paisagem)
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock("landscape").catch(() => {});
+  }
 }
 
 function fecharPlayer() {
@@ -244,7 +259,22 @@ function fecharPlayer() {
     modal.innerHTML = "";
     modal.style.display = "none";
   }
+
+  // Sai do modo tela cheia do navegador
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+
+  // Destrava a rotação de tela no celular
+  if (screen.orientation && screen.orientation.unlock) {
+    screen.orientation.unlock();
+  }
 }
+
 
 // 7. HISTÓRICO LOCAL
 function salvarNoHistorico(id, titulo, tipo) {
