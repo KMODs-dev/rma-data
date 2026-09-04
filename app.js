@@ -1,6 +1,7 @@
 const API_KEY = "19d45d1a9f76411b2add29c8811c6bf1"; // Sua chave do TMDb
 const BASE_URL = "https://api.themoviedb.org/3";
 const IMG_URL = "https://image.tmdb.org/t/p/w500";
+const ORIGINAL_IMG = "https://image.tmdb.org/t/p/original";
 const SUPERFLIX_URL = "https://myembed.biz";
 
 // ============================================================================
@@ -20,24 +21,57 @@ const SUPERFLIX_URL = "https://myembed.biz";
   });
 })();
 
-// 1. CARREGAR FILMES POPULARES
+// 1. CARREGAR FILMES E SEÇÕES
 async function carregarFilmesEmAlta() {
-  const container = document.getElementById("filmes-grid");
-  container.innerHTML = "<p>Carregando catálogo...</p>";
+  await carregarBannerHero();
+  await carregarCarrossel(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}&language=pt-BR`, "em-alta-row");
+  await carregarCarrossel(`${BASE_URL}/movie/popular?api_key=${API_KEY}&language=pt-BR`, "populares-row");
+  await carregarCarrossel(`${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=28&language=pt-BR`, "acao-row");
+}
 
+// CARREGAR BANNER EM DESTAQUE (HERO)
+async function carregarBannerHero() {
   try {
-    const res = await fetch(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}&language=pt-BR`);
+    const res = await fetch(`${BASE_URL}/trending/movie/day?api_key=${API_KEY}&language=pt-BR`);
     const data = await res.json();
-    exibirFilmes(data.results);
+    const destaque = data.results[0];
+
+    if (destaque) {
+      const banner = document.getElementById("hero-banner");
+      const title = document.getElementById("hero-title");
+      const btnPlay = document.getElementById("btn-play-hero");
+
+      if (banner) banner.style.backgroundImage = `url('${ORIGINAL_IMG}${destaque.backdrop_path}')`;
+      if (title) title.innerText = destaque.title || destaque.name;
+      if (btnPlay) {
+        btnPlay.onclick = () => abrirPlayer(destaque.id, (destaque.title || destaque.name).replace(/'/g, "\\'"), 'filme');
+      }
+    }
   } catch (error) {
-    console.error("Erro na requisição:", error);
-    container.innerHTML = "<p>Erro ao carregar o catálogo de filmes.</p>";
+    console.error("Erro ao carregar destaque hero:", error);
   }
 }
 
-// 2. EXIBIR CARDS DOS FILMES
-function exibirFilmes(filmes) {
-  const container = document.getElementById("filmes-grid");
+// 2. EXIBIR CARDS DOS FILMES NOS CARROSSÉIS
+async function carregarCarrossel(url, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    exibirFilmes(data.results, container);
+  } catch (error) {
+    console.error(`Erro ao carregar a seção ${containerId}:`, error);
+    container.innerHTML = "<p>Erro ao carregar os títulos.</p>";
+  }
+}
+
+function exibirFilmes(filmes, container) {
+  if (!container) {
+    container = document.getElementById("em-alta-row") || document.getElementById("filmes-grid");
+  }
+
   container.innerHTML = "";
 
   if (!filmes || filmes.length === 0) {
@@ -52,41 +86,51 @@ function exibirFilmes(filmes) {
 
     const nota = filme.vote_average ? filme.vote_average.toFixed(1) : 'N/A';
     const ano = filme.release_date ? filme.release_date.split('-')[0] : 'N/A';
+    const titulo = (filme.title || filme.name || '').replace(/'/g, "\\'");
 
-    container.innerHTML += `
-      <div class="card" onclick="abrirPlayer(${filme.id}, '${filme.title.replace(/'/g, "\\'")}', 'filme')">
-        <img src="${poster}" alt="${filme.title}">
-        <div class="card-body">
-          <h3>${filme.title}</h3>
-          <div class="info">
-            <span>📅 ${ano}</span>
-            <span class="rating">⭐ ${nota}</span>
-          </div>
-        </div>
-      </div>
+    const card = document.createElement("div");
+    card.className = "poster-card";
+    card.onclick = () => abrirPlayer(filme.id, titulo, 'filme');
+
+    card.innerHTML = `
+      <img src="${poster}" alt="${filme.title || filme.name}">
     `;
+
+    container.appendChild(card);
   });
 }
 
 // 3. BUSCA DE FILMES
-async function buscarMidia() {
-  const termo = document.getElementById("input-busca").value.trim();
+async function buscarMidia(event) {
+  const input = document.getElementById("input-busca");
+  if (!input) return;
+
+  const termo = input.value.trim();
+
+  // Permite acionar por evento de tecla Enter ou clique
+  if (event && event.type === "keyup" && event.key !== "Enter") return;
+
   if (!termo) {
     carregarFilmesEmAlta();
     return;
   }
 
-  const container = document.getElementById("filmes-grid");
-  container.innerHTML = "<p>Buscando...</p>";
+  const container = document.getElementById("em-alta-row") || document.getElementById("filmes-grid");
+  if (container) container.innerHTML = "<p>Buscando...</p>";
 
   try {
     const res = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(termo)}&language=pt-BR`);
     const data = await res.json();
-    exibirFilmes(data.results);
+    exibirFilmes(data.results, container);
   } catch (error) {
     console.error("Erro na busca:", error);
-    container.innerHTML = "<p>Erro ao realizar a busca.</p>";
+    if (container) container.innerHTML = "<p>Erro ao realizar a busca.</p>";
   }
+}
+
+function toggleBusca() {
+  const bar = document.getElementById("search-bar");
+  if (bar) bar.classList.toggle("active");
 }
 
 // 4. ABRIR PLAYER DO SUPERFLIX
@@ -98,7 +142,7 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
     modal.id = "modal-player";
     modal.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9); display: flex; justify-content: center;
+      background: rgba(0,0,0,0.95); display: flex; justify-content: center;
       align-items: center; z-index: 2000; padding: 10px;
     `;
     document.body.appendChild(modal);
@@ -107,13 +151,13 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
   const playerUrl = `${SUPERFLIX_URL}/${tipo}/${tmdbId}`;
 
   modal.innerHTML = `
-    <div style="background: #1e293b; border-radius: 12px; width: 100%; max-width: 900px; padding: 15px; position: relative;">
+    <div style="background: #141414; border-radius: 8px; width: 100%; max-width: 900px; padding: 15px; position: relative; border: 1px solid #333;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h3 style="color: #eab308; font-size: 1.1rem;">🎬 Assistindo: ${titulo}</h3>
-        <button onclick="fecharPlayer()" style="background: #ef4444; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Sair X</button>
+        <h3 style="color: #E50914; font-size: 1.1rem;">🎬 Assistindo: ${titulo}</h3>
+        <button onclick="fecharPlayer()" style="background: #E50914; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Sair X</button>
       </div>
 
-      <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; background: #000;">
+      <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 4px; background: #000;">
         <iframe 
           id="iframe-player"
           src="${playerUrl}" 
