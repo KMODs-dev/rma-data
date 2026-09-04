@@ -229,7 +229,7 @@ function abrirPlayerCustom(caminhoEmbed, titulo) {
       <iframe 
         id="iframe-player"
         src="${playerUrl}" 
-        style="width: 100%; height: 100%; border: none;" 
+        style="width: 100%; height: 70%; border: none;" 
         allow="autoplay; fullscreen"
         allowfullscreen 
         sandbox="allow-scripts allow-same-origin allow-forms"
