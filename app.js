@@ -36,7 +36,6 @@ function exibirFilmes(filmes) {
     const nota = filme.vote_average ? filme.vote_average.toFixed(1) : 'N/A';
     const ano = filme.release_date ? filme.release_date.split('-')[0] : 'N/A';
 
-    // Passamos o ID do TMDb no clique
     container.innerHTML += `
       <div class="card" onclick="abrirPlayer(${filme.id}, '${filme.title.replace(/'/g, "\\'")}', 'filme')">
         <img src="${poster}" alt="${filme.title}">
@@ -73,11 +72,10 @@ async function buscarMidia() {
   }
 }
 
-// 4. ABRIR PLAYER DO SUPERFLIX EM UM MODAL
+// 4. ABRIR PLAYER DO SUPERFLIX COM RESTRIÇÃO DE POP-UPS (SANDBOX)
 function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
   let modal = document.getElementById("modal-player");
 
-  // Se o modal não existir no DOM, cria dinamicamente
   if (!modal) {
     modal = document.createElement("div");
     modal.id = "modal-player";
@@ -89,7 +87,6 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
     document.body.appendChild(modal);
   }
 
-  // URL do embed do Superflix montada dinamicamente
   const playerUrl = `${SUPERFLIX_URL}/${tipo}/${tmdbId}`;
 
   modal.innerHTML = `
@@ -104,6 +101,7 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
           src="${playerUrl}" 
           style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" 
           allowfullscreen 
+          sandbox="allow-scripts allow-same-origin allow-forms"
           scrolling="no">
         </iframe>
       </div>
@@ -117,7 +115,7 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
 function fecharPlayer() {
   const modal = document.getElementById("modal-player");
   if (modal) {
-    modal.innerHTML = ""; // Limpa a iframe para interromper o áudio
+    modal.innerHTML = "";
     modal.style.display = "none";
   }
 }
