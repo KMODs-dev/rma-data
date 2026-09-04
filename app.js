@@ -1,38 +1,24 @@
-const API_KEY = "19d45d1a9f76411b2add29c8811c6bf1"; // Sua chave do TMDb
+const API_KEY = "19d45d1a9f76411b2add29c8811c6bf1";
 const BASE_URL = "https://api.themoviedb.org/3";
 const IMG_URL = "https://image.tmdb.org/t/p/w500";
 const ORIGINAL_IMG = "https://image.tmdb.org/t/p/original";
 const SUPERFLIX_URL = "https://myembed.biz";
 
-// ============================================================================
-// BLOQUEADOR DE POP-UPS E NOVAS GUIAS
-// Intercepta tentativas de scripts de terceiros abrirem novas janelas ou links
-// ============================================================================
-(function aplicarBloqueioAds() {
-  // Sobrescreve a função nativa window.open para impedir a abertura de novas abas
-  window.open = function () {
-    console.warn("Tentativa de abertura de nova guia/pop-up bloqueada.");
-    return null;
-  };
+// Bloqueio de novas janelas acionadas por scripts do embed
+window.open = function () { return null; };
 
-  // Previne a abertura involuntária de esquemas de apps externos (ex: intent:// ou market://)
-  window.addEventListener("beforeunload", function (e) {
-    // Mantém a navegação na página atual
-  });
-})();
-
-// 1. CARREGAR FILMES E SEÇÕES
-async function carregarFilmesEmAlta() {
+// 1. INICIALIZAÇÃO E CARREGAMENTO DE SEÇÕES
+async function carregarCatalogos() {
   await carregarBannerHero();
-  await carregarCarrossel(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}&language=pt-BR`, "em-alta-row");
+  await carregarCarrossel(`${BASE_URL}/trending/all/week?api_key=${API_KEY}&language=pt-BR`, "em-alta-row");
   await carregarCarrossel(`${BASE_URL}/movie/popular?api_key=${API_KEY}&language=pt-BR`, "populares-row");
-  await carregarCarrossel(`${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=28&language=pt-BR`, "acao-row");
+  await carregarCarrossel(`${BASE_URL}/tv/popular?api_key=${API_KEY}&language=pt-BR`, "acao-row");
 }
 
-// CARREGAR BANNER EM DESTAQUE (HERO)
+// 2. HERO BANNER
 async function carregarBannerHero() {
   try {
-    const res = await fetch(`${BASE_URL}/trending/movie/day?api_key=${API_KEY}&language=pt-BR`);
+    const res = await fetch(`${BASE_URL}/trending/all/day?api_key=${API_KEY}&language=pt-BR`);
     const data = await res.json();
     const destaque = data.results[0];
 
@@ -40,19 +26,20 @@ async function carregarBannerHero() {
       const banner = document.getElementById("hero-banner");
       const title = document.getElementById("hero-title");
       const btnPlay = document.getElementById("btn-play-hero");
+      const mediaType = destaque.media_type || (destaque.first_air_date ? 'tv' : 'movie');
 
       if (banner) banner.style.backgroundImage = `url('${ORIGINAL_IMG}${destaque.backdrop_path}')`;
       if (title) title.innerText = destaque.title || destaque.name;
       if (btnPlay) {
-        btnPlay.onclick = () => abrirPlayer(destaque.id, (destaque.title || destaque.name).replace(/'/g, "\\'"), 'filme');
+        btnPlay.onclick = () => processarEMostrarPlayer(destaque.id, destaque.title || destaque.name, mediaType);
       }
     }
   } catch (error) {
-    console.error("Erro ao carregar destaque hero:", error);
+    console.error("Erro no banner principal:", error);
   }
 }
 
-// 2. EXIBIR CARDS DOS FILMES NOS CARROSSÉIS
+// 3. CARROSSÉIS E CARDS (IDENTIFICAÇÃO DE TIPO DE MÍDIA)
 async function carregarCarrossel(url, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -62,80 +49,61 @@ async function carregarCarrossel(url, containerId) {
     const data = await res.json();
     exibirFilmes(data.results, container);
   } catch (error) {
-    console.error(`Erro ao carregar a seção ${containerId}:`, error);
-    container.innerHTML = "<p>Erro ao carregar os títulos.</p>";
+    console.error(`Erro ao carregar ${containerId}:`, error);
   }
 }
 
-function exibirFilmes(filmes, container) {
-  if (!container) {
-    container = document.getElementById("em-alta-row") || document.getElementById("filmes-grid");
-  }
-
+function exibirFilmes(itens, container) {
+  if (!container) container = document.getElementById("em-alta-row");
   container.innerHTML = "";
 
-  if (!filmes || filmes.length === 0) {
+  if (!itens || itens.length === 0) {
     container.innerHTML = "<p>Nenhum resultado encontrado.</p>";
     return;
   }
 
-  filmes.forEach(filme => {
-    const poster = filme.poster_path 
-      ? `${IMG_URL}${filme.poster_path}` 
-      : 'https://via.placeholder.com/500x750?text=Sem+Foto';
+  itens.forEach(item => {
+    if (!item.poster_path) return;
 
-    const nota = filme.vote_average ? filme.vote_average.toFixed(1) : 'N/A';
-    const ano = filme.release_date ? filme.release_date.split('-')[0] : 'N/A';
-    const titulo = (filme.title || filme.name || '').replace(/'/g, "\\'");
+    // Identifica se é filme ou série com base nos campos retornado pelo TMDb
+    const mediaType = item.media_type || (item.first_air_date ? 'tv' : 'movie');
+    const titulo = (item.title || item.name || '').replace(/'/g, "\\'");
 
     const card = document.createElement("div");
     card.className = "poster-card";
-    card.onclick = () => abrirPlayer(filme.id, titulo, 'filme');
+    card.onclick = () => processarEMostrarPlayer(item.id, titulo, mediaType);
 
-    card.innerHTML = `
-      <img src="${poster}" alt="${filme.title || filme.name}">
-    `;
-
+    card.innerHTML = `<img src="${IMG_URL}${item.poster_path}" alt="${titulo}">`;
     container.appendChild(card);
   });
 }
 
-// 3. BUSCA DE FILMES
-async function buscarMidia(event) {
-  const input = document.getElementById("input-busca");
-  if (!input) return;
+// 4. LÓGICA DE DETALHES (TEMPORADAS/EPISÓDIOS PARA SÉRIES)
+async function processarEMostrarPlayer(tmdbId, titulo, tipo) {
+  let detalhesExtra = "";
 
-  const termo = input.value.trim();
-
-  // Permite acionar por evento de tecla Enter ou clique
-  if (event && event.type === "keyup" && event.key !== "Enter") return;
-
-  if (!termo) {
-    carregarFilmesEmAlta();
-    return;
+  if (tipo === 'tv' || tipo === 'serie') {
+    try {
+      const res = await fetch(`${BASE_URL}/tv/${tmdbId}?api_key=${API_KEY}&language=pt-BR`);
+      const dadosSerie = await res.json();
+      
+      const numTemporadas = dadosSerie.number_of_seasons || 1;
+      const numEpisodios = dadosSerie.number_of_episodes || 0;
+      
+      detalhesExtra = `<span style="font-size:0.85rem; color:#a0aec0; margin-left:10px;">📺 ${numTemporadas} Temp. (${numEpisodios} Ep.)</span>`;
+    } catch (e) {
+      console.error("Erro ao buscar detalhes da série:", e);
+    }
   }
 
-  const container = document.getElementById("em-alta-row") || document.getElementById("filmes-grid");
-  if (container) container.innerHTML = "<p>Buscando...</p>";
-
-  try {
-    const res = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(termo)}&language=pt-BR`);
-    const data = await res.json();
-    exibirFilmes(data.results, container);
-  } catch (error) {
-    console.error("Erro na busca:", error);
-    if (container) container.innerHTML = "<p>Erro ao realizar a busca.</p>";
-  }
+  salvarNoHistorico(tmdbId, titulo, tipo);
+  abrirPlayer(tmdbId, titulo, tipo, detalhesExtra);
 }
 
-function toggleBusca() {
-  const bar = document.getElementById("search-bar");
-  if (bar) bar.classList.toggle("active");
-}
-
-// 4. ABRIR PLAYER DO SUPERFLIX
-function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
+// 5. PLAYER DE VÍDEO COM EMBED
+function abrirPlayer(tmdbId, titulo, tipo = 'filme', detalhesExtra = "") {
   let modal = document.getElementById("modal-player");
+  const endpointTipo = (tipo === 'tv' || tipo === 'serie') ? 'serie' : 'filme';
 
   if (!modal) {
     modal = document.createElement("div");
@@ -148,12 +116,12 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
     document.body.appendChild(modal);
   }
 
-  const playerUrl = `${SUPERFLIX_URL}/${tipo}/${tmdbId}`;
+  const playerUrl = `${SUPERFLIX_URL}/${endpointTipo}/${tmdbId}`;
 
   modal.innerHTML = `
     <div style="background: #141414; border-radius: 8px; width: 100%; max-width: 900px; padding: 15px; position: relative; border: 1px solid #333;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h3 style="color: #E50914; font-size: 1.1rem;">🎬 Assistindo: ${titulo}</h3>
+        <h3 style="color: #E50914; font-size: 1rem;">🎬 ${titulo} ${detalhesExtra}</h3>
         <button onclick="fecharPlayer()" style="background: #E50914; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Sair X</button>
       </div>
 
@@ -172,7 +140,6 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
   modal.style.display = "flex";
 }
 
-// 5. FECHAR O PLAYER E PARAR O VÍDEO
 function fecharPlayer() {
   const modal = document.getElementById("modal-player");
   if (modal) {
@@ -181,4 +148,63 @@ function fecharPlayer() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", carregarFilmesEmAlta);
+// 6. SISTEMA DE HISTÓRICO LOCAL
+function salvarNoHistorico(id, titulo, tipo) {
+  let historico = JSON.parse(localStorage.getItem("cineflix_historico") || "[]");
+  historico = historico.filter(item => item.id !== id); // Evita duplicados
+  historico.unshift({ id, titulo, tipo, data: new Date().toLocaleDateString('pt-BR') });
+  
+  if (historico.length > 20) historico.pop(); // Limita aos últimos 20
+  localStorage.setItem("cineflix_historico", JSON.stringify(historico));
+}
+
+function abrirHistorico() {
+  const historico = JSON.parse(localStorage.getItem("cineflix_historico") || "[]");
+  if (historico.length === 0) {
+    alert("Seu histórico de exibição está vazio.");
+    return;
+  }
+
+  let listaText = "🕒 Últimos assistidos:\n\n";
+  historico.forEach(item => {
+    const rotulo = (item.tipo === 'tv' || item.tipo === 'serie') ? '📺 Série' : '🎬 Filme';
+    listaText += `${rotulo}: ${item.titulo} (${item.data})\n`;
+  });
+
+  alert(listaText);
+}
+
+// 7. ABA DE CANAIS ESPORTIVOS
+function abrirCanaisEsportivos() {
+  // Redireciona ou carrega a seção de esportes em uma nova aba
+  window.openOriginal = window.open; // Referência para acionar navegação legítima
+  const abaEsportes = window.openOriginal(`${SUPERFLIX_URL}/futebol`, '_blank');
+}
+
+// BUSCA MULTI-MÍDIA
+async function buscarMidia(event) {
+  const input = document.getElementById("input-busca");
+  if (!input) return;
+
+  const termo = input.value.trim();
+  if (event && event.type === "keyup" && event.key !== "Enter") return;
+  if (!termo) { carregarCatalogos(); return; }
+
+  const container = document.getElementById("em-alta-row");
+  if (container) container.innerHTML = "<p>Buscando...</p>";
+
+  try {
+    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(termo)}&language=pt-BR`);
+    const data = await res.json();
+    exibirFilmes(data.results, container);
+  } catch (error) {
+    console.error("Erro na busca:", error);
+  }
+}
+
+function toggleBusca() {
+  const bar = document.getElementById("search-bar");
+  if (bar) bar.classList.toggle("active");
+}
+
+document.addEventListener("DOMContentLoaded", carregarCatalogos);

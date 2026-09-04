@@ -84,14 +84,22 @@
   </main>
 
   <!-- Navegação Inferior -->
-  <nav class="bottom-nav">
-    <div class="nav-item active">
-      <span class="nav-icon">🏠</span>Início
-    </div>
-    <div class="nav-item" onclick="toggleBusca()">
-      <span class="nav-icon">🔍</span>Buscar
-    </div>
-  </nav>
+<!-- Navegação Inferior Atualizada -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="carregarCatalogos()">
+    <span class="nav-icon">🏠</span>Início
+  </div>
+  <div class="nav-item" onclick="toggleBusca()">
+    <span class="nav-icon">🔍</span>Buscar
+  </div>
+  <div class="nav-item" onclick="abrirHistorico()">
+    <span class="nav-icon">🕒</span>Histórico
+  </div>
+  <div class="nav-item" onclick="abrirCanaisEsportivos()">
+    <span class="nav-icon">⚽</span>Esportes
+  </div>
+</nav>
+
 
   <script src="app.js"></script>
 </body>
