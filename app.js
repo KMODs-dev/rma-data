@@ -1,7 +1,7 @@
 const API_KEY = "19d45d1a9f76411b2add29c8811c6bf1"; // Sua chave do TMDb
 const BASE_URL = "https://api.themoviedb.org/3";
 const IMG_URL = "https://image.tmdb.org/t/p/w500";
-const SUPERFLIX_URL = "https://superflixapi.beer";
+const SUPERFLIX_URL = "https://myembed.biz";
 
 // 1. CARREGAR FILMES POPULARES
 async function carregarFilmesEmAlta() {
