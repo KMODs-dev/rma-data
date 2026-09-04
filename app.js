@@ -208,7 +208,6 @@ function abrirPlayerCustom(caminhoEmbed, titulo) {
     document.body.appendChild(modal);
   }
 
-  // Estilo ocupando 100% da tela
   modal.style.cssText = `
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: #000; display: flex; flex-direction: column;
@@ -224,17 +223,15 @@ function abrirPlayerCustom(caminhoEmbed, titulo) {
       <button onclick="fecharPlayer()" style="background: #E50914; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">Sair X</button>
     </div>
 
-    <!-- Container do Vídeo -->
-    <div id="container-iframe-wrapper" style="width: 100%; height: 100%; position: relative; background: #000;">
-      <!-- CAMADA PROTETORA ANTI-ADS: Absorve o primeiro clique invisível do player -->
-      <div id="camada-anti-ads" onclick="removerCapaAd(this)" style="position: absolute; inset: 0; z-index: 9998; background: rgba(0,0,0,0.01); cursor: pointer;"></div>
-
+    <!-- Container do Vídeo em 100% -->
+    <div style="width: 100%; height: 100%; position: relative; background: #000;">
       <iframe 
         id="iframe-player"
         src="${playerUrl}" 
         style="width: 100%; height: 100%; border: none;" 
         allow="autoplay; fullscreen"
         allowfullscreen 
+        sandbox="allow-scripts allow-same-origin allow-forms"
         scrolling="no">
       </iframe>
     </div>
@@ -242,31 +239,19 @@ function abrirPlayerCustom(caminhoEmbed, titulo) {
 
   modal.style.display = "flex";
 
-  // 1. Bloqueador Global de Pop-ups e Redirecionamentos via JS
-  window.open = function () {
-    console.warn("Pop-up do player bloqueado com sucesso.");
-    return null;
-  };
-
-  // 2. Coloca o modal em Tela Cheia
+  // Entra em Tela Cheia
   if (modal.requestFullscreen) {
     modal.requestFullscreen().catch(() => {});
   } else if (modal.webkitRequestFullscreen) {
     modal.webkitRequestFullscreen();
   }
 
-  // 3. Trava a tela na horizontal (paisagem)
+  // Trava na horizontal
   if (screen.orientation && screen.orientation.lock) {
     screen.orientation.lock("landscape").catch(() => {});
   }
 }
 
-// Função para remover a camada transparente no primeiro toque/clique
-function removerCapaAd(elemento) {
-  if (elemento) {
-    elemento.remove();
-  }
-}
 
 
 function fecharPlayer() {
