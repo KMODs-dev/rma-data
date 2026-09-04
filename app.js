@@ -472,7 +472,7 @@ async function abrirTelaBusca(termo) {
 
   try {
     // Faz a consulta na API TMDB
-    const res = await fetch(`${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(termo)}&include_adult=false`);
+    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&language=pt-BR&query=${encodeURIComponent(termo)}&include_adult=false`);
     const data = await res.json();
     
     const resultados = (data.results || []).filter(item => (item.media_type === 'movie' || item.media_type === 'tv') && item.poster_path);
