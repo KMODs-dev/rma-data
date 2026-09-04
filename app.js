@@ -533,6 +533,9 @@ function fecharTelaBusca() {
   const modal = document.getElementById("modal-busca-exclusiva");
   if (modal) modal.style.display = "none";
 }
-
+function toggleBusca() {
+  const bar = document.getElementById("search-bar");
+  if (bar) bar.classList.toggle("active");
+}
 
 document.addEventListener("DOMContentLoaded", carregarCatalogos);
