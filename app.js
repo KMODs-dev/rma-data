@@ -73,6 +73,7 @@ async function buscarMidia() {
 }
 
 // 4. ABRIR PLAYER DO SUPERFLIX COM RESTRIÇÃO DE POP-UPS (SANDBOX)
+// 4. ABRIR PLAYER DO SUPERFLIX
 function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
   let modal = document.getElementById("modal-player");
 
@@ -101,7 +102,6 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
           src="${playerUrl}" 
           style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" 
           allowfullscreen 
-          sandbox="allow-scripts allow-same-origin allow-forms"
           scrolling="no">
         </iframe>
       </div>
