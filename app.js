@@ -422,29 +422,117 @@ async function carregarEventosEsportivos() {
 }
 
 // 9. BUSCA MULTI-MÍDIA
+// ============================================================================
+// SISTEMA DE BUSCA EM TELA PRÓPRIA (SEM ATERAR O "EM ALTA")
+// ============================================================================
+
 async function buscarMidia(event) {
-  const input = document.getElementById("input-busca");
-  if (!input) return;
+  // Dispara a busca apenas ao pressionar 'Enter' no teclado ou digitar mais de 2 letras
+  const termo = event.target ? event.target.value : event;
+  if (!termo || termo.trim().length < 2) return;
 
-  const termo = input.value.trim();
-  if (event && event.type === "keyup" && event.key !== "Enter") return;
-  if (!termo) { carregarCatalogos(); return; }
+  // Se o usuário pressionar Enter
+  if (event.key && event.key !== "Enter") return;
 
-  const container = document.getElementById("em-alta-row");
-  if (container) container.innerHTML = "<p>Buscando...</p>";
+  // Fecha o teclado / tira o foco do input
+  if (event.target) event.target.blur();
+
+  abrirTelaBusca(termo.trim());
+}
+
+async function abrirTelaBusca(termo) {
+  let modalBusca = document.getElementById("modal-busca-exclusiva");
+
+  // Se o modal não existir no DOM, cria dinamicamente
+  if (!modalBusca) {
+    modalBusca = document.createElement("div");
+    modalBusca.id = "modal-busca-exclusiva";
+    modalBusca.style.cssText = `
+      position: fixed; inset: 0; background: #141414; z-index: 3000;
+      overflow-y: auto; padding: 20px; display: none;
+    `;
+    document.body.appendChild(modalBusca);
+  }
+
+  modalBusca.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+      <h2 style="color: #fff; font-size: 1.2rem; margin: 0;">
+        Resultados para: <span style="color: #E50914;">"${termo}"</span>
+      </h2>
+      <button onclick="fecharTelaBusca()" style="background: #E50914; color: white; border: none; padding: 6px 14px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+        Sair X
+      </button>
+    </div>
+    <div id="grid-resultados-busca" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px;">
+      <p style="color: #aaa; grid-column: 1/-1; text-align: center; padding: 40px;">Procurando no catálogo...</p>
+    </div>
+  `;
+
+  modalBusca.style.display = "block";
 
   try {
-    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(termo)}&language=pt-BR`);
+    // Faz a consulta na API TMDB
+    const res = await fetch(`${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(termo)}&include_adult=false`);
     const data = await res.json();
-    exibirFilmes(data.results, container);
+    
+    const resultados = (data.results || []).filter(item => (item.media_type === 'movie' || item.media_type === 'tv') && item.poster_path);
+    renderizarGridBusca(resultados);
+
   } catch (error) {
     console.error("Erro na busca:", error);
+    document.getElementById("grid-resultados-busca").innerHTML = `<p style="color: #ef4444; grid-column: 1/-1; text-align: center;">Erro ao carregar resultados da busca.</p>`;
   }
 }
 
-function toggleBusca() {
-  const bar = document.getElementById("search-bar");
-  if (bar) bar.classList.toggle("active");
+function renderizarGridBusca(lista) {
+  const container = document.getElementById("grid-resultados-busca");
+  if (!container) return;
+
+  if (lista.length === 0) {
+    container.innerHTML = `<p style="color: #aaa; grid-column: 1/-1; text-align: center; padding: 40px;">Nenhum título encontrado.</p>`;
+    return;
+  }
+
+  container.innerHTML = "";
+
+  lista.forEach(item => {
+    const card = document.createElement("div");
+    card.style.cssText = `
+      cursor: pointer; transition: transform 0.2s; border-radius: 4px; overflow: hidden; background: #222;
+    `;
+
+    const titulo = item.title || item.name || "Sem título";
+    const capa = `${TMDB_IMG_URL}${item.poster_path}`;
+    const tipo = item.media_type === 'tv' ? 'SÉRIE' : 'FILME';
+
+    card.onclick = () => {
+      fecharTelaBusca();
+      // Abre a tela de detalhes/sinopse mantendo sua lógica atual
+      if (typeof carregarDetalhes === "function") {
+        carregarDetalhes(item.id, item.media_type);
+      } else if (typeof abrirSinopse === "function") {
+        abrirSinopse(item.id, item.media_type);
+      }
+    };
+
+    card.innerHTML = `
+      <div style="position: relative; aspect-ratio: 2/3;">
+        <img src="${capa}" alt="${titulo}" style="width: 100%; height: 100%; object-fit: cover;">
+        <span style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: #22c55e; font-size: 0.6rem; padding: 2px 4px; border-radius: 3px; font-weight: bold;">
+          ${tipo}
+        </span>
+      </div>
+      <p style="color: #fff; font-size: 0.75rem; padding: 5px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${titulo}</p>
+    `;
+
+    container.appendChild(card);
+  });
 }
+
+function fecharTelaBusca() {
+  const modal = document.getElementById("modal-busca-exclusiva");
+  if (modal) modal.style.display = "none";
+}
+
 
 document.addEventListener("DOMContentLoaded", carregarCatalogos);
