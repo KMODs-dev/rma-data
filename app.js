@@ -423,27 +423,29 @@ async function carregarEventosEsportivos() {
 
 // 9. BUSCA MULTI-MÍDIA
 // ============================================================================
-// SISTEMA DE BUSCA EM TELA PRÓPRIA (SEM ATERAR O "EM ALTA")
+// SISTEMA DE BUSCA EM TELA EXCLUSIVA
 // ============================================================================
 
 async function buscarMidia(event) {
-  // Dispara a busca apenas ao pressionar 'Enter' no teclado ou digitar mais de 2 letras
-  const termo = event.target ? event.target.value : event;
-  if (!termo || termo.trim().length < 2) return;
+  const input = document.getElementById("input-busca");
+  if (!input) return;
 
-  // Se o usuário pressionar Enter
-  if (event.key && event.key !== "Enter") return;
+  const termo = input.value.trim();
 
-  // Fecha o teclado / tira o foco do input
-  if (event.target) event.target.blur();
+  // Permite disparar se o usuário pressionar Enter ou se for um clique no botão
+  if (event && event.type === "keyup" && event.key !== "Enter") return;
+  if (!termo) return;
 
-  abrirTelaBusca(termo.trim());
+  // Fecha o teclado em dispositivos móveis
+  input.blur();
+
+  abrirTelaBusca(termo);
 }
 
 async function abrirTelaBusca(termo) {
   let modalBusca = document.getElementById("modal-busca-exclusiva");
 
-  // Se o modal não existir no DOM, cria dinamicamente
+  // Se a tela/modal de busca ainda não existir no HTML, cria dinamicamente
   if (!modalBusca) {
     modalBusca = document.createElement("div");
     modalBusca.id = "modal-busca-exclusiva";
@@ -454,6 +456,7 @@ async function abrirTelaBusca(termo) {
     document.body.appendChild(modalBusca);
   }
 
+  // Estrutura o cabeçalho e a grade da nova tela
   modalBusca.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">
       <h2 style="color: #fff; font-size: 1.2rem; margin: 0;">
@@ -464,23 +467,24 @@ async function abrirTelaBusca(termo) {
       </button>
     </div>
     <div id="grid-resultados-busca" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px;">
-      <p style="color: #aaa; grid-column: 1/-1; text-align: center; padding: 40px;">Procurando no catálogo...</p>
+      <p style="color: #aaa; grid-column: 1/-1; text-align: center; padding: 40px;">Buscando conteúdos...</p>
     </div>
   `;
 
   modalBusca.style.display = "block";
 
   try {
-    // Faz a consulta na API TMDB
-    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&language=pt-BR&query=${encodeURIComponent(termo)}&include_adult=false`);
+    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(termo)}&language=pt-BR`);
     const data = await res.json();
     
+    // Filtra apenas filmes e séries que possuam capa
     const resultados = (data.results || []).filter(item => (item.media_type === 'movie' || item.media_type === 'tv') && item.poster_path);
     renderizarGridBusca(resultados);
 
   } catch (error) {
     console.error("Erro na busca:", error);
-    document.getElementById("grid-resultados-busca").innerHTML = `<p style="color: #ef4444; grid-column: 1/-1; text-align: center;">Erro ao carregar resultados da busca.</p>`;
+    const grid = document.getElementById("grid-resultados-busca");
+    if (grid) grid.innerHTML = `<p style="color: #ef4444; grid-column: 1/-1; text-align: center;">Erro ao carregar resultados.</p>`;
   }
 }
 
@@ -502,17 +506,13 @@ function renderizarGridBusca(lista) {
     `;
 
     const titulo = item.title || item.name || "Sem título";
-    const capa = `${TMDB_IMG_URL}${item.poster_path}`;
+    const capa = `${IMG_URL}${item.poster_path}`;
     const tipo = item.media_type === 'tv' ? 'SÉRIE' : 'FILME';
 
+    // Ao clicar num item da busca, fecha a tela e abre a sinopse/detalhes
     card.onclick = () => {
       fecharTelaBusca();
-      // Abre a tela de detalhes/sinopse mantendo sua lógica atual
-      if (typeof carregarDetalhes === "function") {
-        carregarDetalhes(item.id, item.media_type);
-      } else if (typeof abrirSinopse === "function") {
-        abrirSinopse(item.id, item.media_type);
-      }
+      abrirDetalhes(item.id, item.media_type);
     };
 
     card.innerHTML = `
@@ -533,9 +533,11 @@ function fecharTelaBusca() {
   const modal = document.getElementById("modal-busca-exclusiva");
   if (modal) modal.style.display = "none";
 }
+
 function toggleBusca() {
   const bar = document.getElementById("search-bar");
   if (bar) bar.classList.toggle("active");
 }
+
 
 document.addEventListener("DOMContentLoaded", carregarCatalogos);
