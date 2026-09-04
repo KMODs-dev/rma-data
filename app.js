@@ -4,8 +4,23 @@ const IMG_URL = "https://image.tmdb.org/t/p/w500";
 const ORIGINAL_IMG = "https://image.tmdb.org/t/p/original";
 const SUPERFLIX_URL = "https://myembed.biz";
 
-// Bloqueio de novas janelas acionadas por scripts do embed
-window.open = function () { return null; };
+let mediaAtualId = null;
+let mediaAtualTipo = null;
+
+// ============================================================================
+// BLOQUEADOR DE POP-UPS E NOVAS GUIAS
+// Intercepta tentativas de scripts de terceiros abrirem novas janelas ou links
+// ============================================================================
+(function aplicarBloqueioAds() {
+  window.open = function () {
+    console.warn("Tentativa de abertura de nova guia/pop-up bloqueada.");
+    return null;
+  };
+
+  window.addEventListener("beforeunload", function (e) {
+    // Mantém a navegação na página atual
+  });
+})();
 
 // 1. INICIALIZAÇÃO E CARREGAMENTO DE SEÇÕES
 async function carregarCatalogos() {
@@ -31,7 +46,7 @@ async function carregarBannerHero() {
       if (banner) banner.style.backgroundImage = `url('${ORIGINAL_IMG}${destaque.backdrop_path}')`;
       if (title) title.innerText = destaque.title || destaque.name;
       if (btnPlay) {
-        btnPlay.onclick = () => processarEMostrarPlayer(destaque.id, destaque.title || destaque.name, mediaType);
+        btnPlay.onclick = () => abrirDetalhes(destaque.id, mediaType);
       }
     }
   } catch (error) {
@@ -39,7 +54,7 @@ async function carregarBannerHero() {
   }
 }
 
-// 3. CARROSSÉIS E CARDS (IDENTIFICAÇÃO DE TIPO DE MÍDIA)
+// 3. CARROSSÉIS E CARDS
 async function carregarCarrossel(url, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -65,45 +80,127 @@ function exibirFilmes(itens, container) {
   itens.forEach(item => {
     if (!item.poster_path) return;
 
-    // Identifica se é filme ou série com base nos campos retornado pelo TMDb
     const mediaType = item.media_type || (item.first_air_date ? 'tv' : 'movie');
     const titulo = (item.title || item.name || '').replace(/'/g, "\\'");
 
     const card = document.createElement("div");
     card.className = "poster-card";
-    card.onclick = () => processarEMostrarPlayer(item.id, titulo, mediaType);
+    card.onclick = () => abrirDetalhes(item.id, mediaType);
 
     card.innerHTML = `<img src="${IMG_URL}${item.poster_path}" alt="${titulo}">`;
     container.appendChild(card);
   });
 }
 
-// 4. LÓGICA DE DETALHES (TEMPORADAS/EPISÓDIOS PARA SÉRIES)
-async function processarEMostrarPlayer(tmdbId, titulo, tipo) {
-  let detalhesExtra = "";
+// 4. TELA DE DETALHES (FILME OU SÉRIE COM TEMPORADAS)
+async function abrirDetalhes(tmdbId, tipo) {
+  mediaAtualId = tmdbId;
+  mediaAtualTipo = tipo;
 
-  if (tipo === 'tv' || tipo === 'serie') {
-    try {
-      const res = await fetch(`${BASE_URL}/tv/${tmdbId}?api_key=${API_KEY}&language=pt-BR`);
-      const dadosSerie = await res.json();
+  const endpoint = tipo === 'tv' ? 'tv' : 'movie';
+
+  try {
+    const res = await fetch(`${BASE_URL}/${endpoint}/${tmdbId}?api_key=${API_KEY}&language=pt-BR`);
+    const dados = await res.json();
+
+    const modal = document.getElementById("modal-detalhes");
+    const titulo = dados.title || dados.name;
+    const ano = (dados.release_date || dados.first_air_date || '').split('-')[0];
+    const nota = dados.vote_average ? `${dados.vote_average.toFixed(1)} ⭐` : 'N/A';
+
+    document.getElementById("detalhes-backdrop").style.backgroundImage = `url('${ORIGINAL_IMG}${dados.backdrop_path || dados.poster_path}')`;
+    document.getElementById("detalhes-titulo").innerText = titulo;
+    document.getElementById("detalhes-ano").innerText = ano;
+    document.getElementById("detalhes-nota").innerText = nota;
+    document.getElementById("detalhes-sinopse").innerText = dados.overview || "Sem sinopse disponível.";
+
+    const secaoTemp = document.getElementById("secao-temporadas");
+    const btnPlay = document.getElementById("btn-play-principal");
+
+    if (tipo === 'tv') {
+      document.getElementById("detalhes-info-extra").innerText = `${dados.number_of_seasons} Temp. (${dados.number_of_episodes} Ep.)`;
+      btnPlay.onclick = () => assistirEpisodio(tmdbId, 1, 1, `${titulo} - T1:E1`);
       
-      const numTemporadas = dadosSerie.number_of_seasons || 1;
-      const numEpisodios = dadosSerie.number_of_episodes || 0;
-      
-      detalhesExtra = `<span style="font-size:0.85rem; color:#a0aec0; margin-left:10px;">📺 ${numTemporadas} Temp. (${numEpisodios} Ep.)</span>`;
-    } catch (e) {
-      console.error("Erro ao buscar detalhes da série:", e);
+      const select = document.getElementById("select-temporadas");
+      select.innerHTML = "";
+      dados.seasons.forEach(season => {
+        if (season.season_number > 0) {
+          select.innerHTML += `<option value="${season.season_number}">${season.name}</option>`;
+        }
+      });
+
+      secaoTemp.style.display = "block";
+      if (dados.seasons.length > 0) {
+        carregarEpisodios(select.value || 1);
+      }
+    } else {
+      document.getElementById("detalhes-info-extra").innerText = `${dados.runtime || 0} min`;
+      secaoTemp.style.display = "none";
+      btnPlay.onclick = () => {
+        salvarNoHistorico(tmdbId, titulo, 'filme');
+        abrirPlayer(tmdbId, titulo, 'filme');
+      };
     }
-  }
 
-  salvarNoHistorico(tmdbId, titulo, tipo);
-  abrirPlayer(tmdbId, titulo, tipo, detalhesExtra);
+    modal.style.display = "block";
+  } catch (err) {
+    console.error("Erro ao carregar detalhes:", err);
+  }
 }
 
-// 5. PLAYER DE VÍDEO COM EMBED
-function abrirPlayer(tmdbId, titulo, tipo = 'filme', detalhesExtra = "") {
-  let modal = document.getElementById("modal-player");
+function fecharDetalhes() {
+  const modal = document.getElementById("modal-detalhes");
+  if (modal) modal.style.display = "none";
+}
+
+// 5. CARREGAR EPISÓDIOS DA TEMPORADA
+async function carregarEpisodios(numTemporada) {
+  const container = document.getElementById("lista-episodios");
+  container.innerHTML = "<p>Carregando episódios...</p>";
+
+  try {
+    const res = await fetch(`${BASE_URL}/tv/${mediaAtualId}/season/${numTemporada}?api_key=${API_KEY}&language=pt-BR`);
+    const dados = await res.json();
+
+    container.innerHTML = "";
+    dados.episodes.forEach(ep => {
+      const epCard = document.createElement("div");
+      epCard.style.cssText = "display:flex; align-items:center; gap:10px; background:#222; padding:8px; border-radius:6px; cursor:pointer;";
+      
+      const thumb = ep.still_path ? `${IMG_URL}${ep.still_path}` : 'https://via.placeholder.com/100x60?text=Sem+Foto';
+      const tituloSerie = document.getElementById("detalhes-titulo").innerText;
+
+      epCard.onclick = () => assistirEpisodio(mediaAtualId, numTemporada, ep.episode_number, `${tituloSerie} - T${numTemporada}:E${ep.episode_number}`);
+
+      epCard.innerHTML = `
+        <img src="${thumb}" style="width:90px; height:55px; object-fit:cover; border-radius:4px;">
+        <div>
+          <strong style="font-size:0.85rem; display:block; color:#fff;">EP ${ep.episode_number}: ${ep.name}</strong>
+          <span style="font-size:0.75rem; color:#aaa;">${ep.runtime ? ep.runtime + ' min' : ''}</span>
+        </div>
+      `;
+      container.appendChild(epCard);
+    });
+  } catch (err) {
+    console.error("Erro ao buscar episódios:", err);
+    container.innerHTML = "<p>Erro ao carregar episódios.</p>";
+  }
+}
+
+function assistirEpisodio(tmdbId, temporada, episodio, tituloExibicao) {
+  salvarNoHistorico(tmdbId, tituloExibicao, 'tv');
+  const endpointEspecial = `serie/${tmdbId}/${temporada}/${episodio}`;
+  abrirPlayerCustom(endpointEspecial, tituloExibicao);
+}
+
+// 6. PLAYER DE VÍDEO EMBED
+function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
   const endpointTipo = (tipo === 'tv' || tipo === 'serie') ? 'serie' : 'filme';
+  abrirPlayerCustom(`${endpointTipo}/${tmdbId}`, titulo);
+}
+
+function abrirPlayerCustom(caminhoEmbed, titulo) {
+  let modal = document.getElementById("modal-player");
 
   if (!modal) {
     modal = document.createElement("div");
@@ -116,12 +213,12 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme', detalhesExtra = "") {
     document.body.appendChild(modal);
   }
 
-  const playerUrl = `${SUPERFLIX_URL}/${endpointTipo}/${tmdbId}`;
+  const playerUrl = `${SUPERFLIX_URL}/${caminhoEmbed}`;
 
   modal.innerHTML = `
     <div style="background: #141414; border-radius: 8px; width: 100%; max-width: 900px; padding: 15px; position: relative; border: 1px solid #333;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h3 style="color: #E50914; font-size: 1rem;">🎬 ${titulo} ${detalhesExtra}</h3>
+        <h3 style="color: #E50914; font-size: 1rem;">🎬 ${titulo}</h3>
         <button onclick="fecharPlayer()" style="background: #E50914; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Sair X</button>
       </div>
 
@@ -131,6 +228,7 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme', detalhesExtra = "") {
           src="${playerUrl}" 
           style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" 
           allowfullscreen 
+          sandbox="allow-scripts allow-same-origin allow-forms"
           scrolling="no">
         </iframe>
       </div>
@@ -148,13 +246,13 @@ function fecharPlayer() {
   }
 }
 
-// 6. SISTEMA DE HISTÓRICO LOCAL
+// 7. HISTÓRICO LOCAL
 function salvarNoHistorico(id, titulo, tipo) {
   let historico = JSON.parse(localStorage.getItem("cineflix_historico") || "[]");
-  historico = historico.filter(item => item.id !== id); // Evita duplicados
+  historico = historico.filter(item => item.id !== id || item.titulo !== titulo);
   historico.unshift({ id, titulo, tipo, data: new Date().toLocaleDateString('pt-BR') });
   
-  if (historico.length > 20) historico.pop(); // Limita aos últimos 20
+  if (historico.length > 20) historico.pop();
   localStorage.setItem("cineflix_historico", JSON.stringify(historico));
 }
 
@@ -174,14 +272,12 @@ function abrirHistorico() {
   alert(listaText);
 }
 
-// 7. ABA DE CANAIS ESPORTIVOS
+// 8. CANAIS ESPORTIVOS
 function abrirCanaisEsportivos() {
-  // Redireciona ou carrega a seção de esportes em uma nova aba
-  window.openOriginal = window.open; // Referência para acionar navegação legítima
-  const abaEsportes = window.openOriginal(`${SUPERFLIX_URL}/futebol`, '_blank');
+  window.open(`${SUPERFLIX_URL}/futebol`, '_blank');
 }
 
-// BUSCA MULTI-MÍDIA
+// 9. BUSCA MULTI-MÍDIA
 async function buscarMidia(event) {
   const input = document.getElementById("input-busca");
   if (!input) return;

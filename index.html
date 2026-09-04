@@ -85,12 +85,13 @@
 
   <!-- Navegação Inferior -->
 <!-- Navegação Inferior Atualizada -->
+<!-- Barra de Navegação Inferior -->
 <nav class="bottom-nav">
-  <div class="nav-item active" onclick="carregarCatalogos()">
+  <div class="nav-item" onclick="carregarCatalogos()">
     <span class="nav-icon">🏠</span>Início
   </div>
   <div class="nav-item" onclick="toggleBusca()">
-    <span class="nav-icon">🔍</span>Buscar
+    <span class="nav-icon">🔍</span>Pesquisar
   </div>
   <div class="nav-item" onclick="abrirHistorico()">
     <span class="nav-icon">🕒</span>Histórico
@@ -99,6 +100,38 @@
     <span class="nav-icon">⚽</span>Esportes
   </div>
 </nav>
+
+<!-- Modal de Detalhes do Filme / Série -->
+<div id="modal-detalhes" style="display:none; position:fixed; inset:0; background:#141414; z-index:1500; overflow-y:auto; padding-bottom:30px;">
+  <div style="position:relative;">
+    <button onclick="fecharDetalhes()" style="position:absolute; top:15px; right:15px; z-index:10; background:rgba(0,0,0,0.7); color:#fff; border:none; width:36px; height:36px; border-radius:50%; font-weight:bold; cursor:pointer;">✕</button>
+    <div id="detalhes-backdrop" style="height:35vh; background-size:cover; background-position:center; position:relative;">
+      <div style="position:absolute; inset:0; background:linear-gradient(0deg, #141414 0%, transparent 100%);"></div>
+    </div>
+  </div>
+
+  <div style="padding: 0 20px; margin-top: -40px; position:relative; z-index:2;">
+    <h2 id="detalhes-titulo" style="font-size: 1.8rem; margin-bottom: 8px; color:#fff;"></h2>
+    <div style="display:flex; gap:15px; font-size:0.9rem; color:#aaa; margin-bottom: 12px;">
+      <span id="detalhes-ano"></span>
+      <span id="detalhes-nota" style="color:#46d369; font-weight:bold;"></span>
+      <span id="detalhes-info-extra"></span>
+    </div>
+
+    <button id="btn-play-principal" style="width:100%; padding:12px; background:#fff; color:#000; border:none; border-radius:4px; font-weight:bold; font-size:1rem; cursor:pointer; margin-bottom:15px;">▶ Assistir Agora</button>
+
+    <p id="detalhes-sinopse" style="font-size:0.9rem; color:#ccc; line-height:1.4; margin-bottom:20px;"></p>
+
+    <!-- Estrutura das Temporadas / Episódios -->
+    <div id="secao-temporadas" style="display:none;">
+      <label for="select-temporadas" style="font-weight:bold; color:#fff; display:block; margin-bottom:8px;">Temporadas:</label>
+      <select id="select-temporadas" onchange="carregarEpisodios(this.value)" style="background:#333; color:#fff; padding:10px; border-radius:4px; border:none; width:100%; margin-bottom:15px;"></select>
+
+      <div id="lista-episodios" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+  </div>
+</div>
+
 
 
   <script src="app.js"></script>
