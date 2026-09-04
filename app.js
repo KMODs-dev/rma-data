@@ -277,7 +277,24 @@ function abrirHistorico() {
 // 8. TELA DE CANAIS ESPORTIVOS & EVENTOS AO VIVO (INTEGRAÇÃO COM API SUPERFLIX)
 // ============================================================================
 
-const API_EVENTOS_URL = "https://superflixapi.beer/lista?category=eventos&format=json";
+// ============================================================================
+// 8. TELA DE CANAIS ESPORTIVOS & EVENTOS AO VIVO (COM CORREÇÃO DE CORS)
+// ============================================================================
+
+// Usamos um Proxy CORS para contornar o bloqueio do navegador na Vercel
+const API_EVENTOS_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://superflixapi.beer/lista?category=eventos&format=json");
+
+// Lista de backup (Canais 24h) para exibir caso a API esteja sem eventos ou falhe
+const CANAIS_FIXOS_BACKUP = [
+  { title: "Futebol Ao Vivo (Grade Geral)", modalidade: "Todos os Jogos", play_event_url: "futebol", status: "AO VIVO" },
+  { title: "Premiere Clubes HD", modalidade: "Premiere 24h", play_event_url: "canal/premiere-clubes", status: "AO VIVO" },
+  { title: "Premiere 1 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "canal/premiere-1", status: "AO VIVO" },
+  { title: "SporTV 1 HD", modalidade: "SporTV", play_event_url: "canal/sportv-1", status: "AO VIVO" },
+  { title: "SporTV 2 HD", modalidade: "SporTV", play_event_url: "canal/sportv-2", status: "AO VIVO" },
+  { title: "ESPN Brasil HD", modalidade: "ESPN / Star+", play_event_url: "canal/espn", status: "AO VIVO" },
+  { title: "TNT Sports HD", modalidade: "Champions / Max", play_event_url: "canal/tnt-sports", status: "AO VIVO" },
+  { title: "CazéTV Ao Vivo", modalidade: "YouTube / Streaming", play_event_url: "canal/cazetv", status: "AO VIVO" }
+];
 
 function abrirCanaisEsportivos() {
   const modal = document.getElementById("modal-esportes");
@@ -296,84 +313,83 @@ async function carregarEventosEsportivos() {
   const grid = document.getElementById("grid-esportes");
   if (!grid) return;
 
-  grid.innerHTML = "<p style='color:#aaa; text-align:center; grid-column: 1/-1;'>Carregando eventos esportivos ao vivo...</p>";
+  grid.innerHTML = "<p style='color:#aaa; text-align:center; grid-column: 1/-1;'>Carregando transmissões ao vivo...</p>";
+
+  let eventos = [];
 
   try {
     const res = await fetch(API_EVENTOS_URL);
-    const eventos = await res.json();
-
-    grid.innerHTML = "";
-
-    // Verifica se a API retornou eventos
-    if (!eventos || eventos.length === 0) {
-      grid.innerHTML = "<p style='color:#aaa; text-align:center; grid-column: 1/-1;'>Nenhum evento esportivo agendado no momento.</p>";
-      return;
+    if (res.ok) {
+      eventos = await res.json();
     }
-
-    eventos.forEach(evento => {
-      const card = document.createElement("div");
-      card.style.cssText = `
-        background: #18222d;
-        border-radius: 10px;
-        padding: 12px 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: pointer;
-        border: 1px solid #283747;
-        transition: transform 0.2s, border-color 0.2s;
-      `;
-
-      card.onmouseover = () => { card.style.borderColor = "#22c55e"; card.style.transform = "translateY(-2px)"; };
-      card.onmouseout = () => { card.style.borderColor = "#283747"; card.style.transform = "translateY(0)"; };
-
-      // Lógica de abertura do player
-      card.onclick = () => {
-        fecharEsportes();
-        
-        // Prioriza a URL direta do player do evento preparada pela API
-        if (evento.play_event_url) {
-          abrirPlayerCustom(evento.play_event_url.replace(`${SUPERFLIX_URL}/`, ''), evento.title || evento.nome || "Evento Esportivo");
-        } else if (evento.slug) {
-          abrirPlayerCustom(`eventos/${evento.slug}`, evento.title || evento.nome || "Evento Esportivo");
-        } else {
-          abrirPlayerCustom("futebol", "Futebol Ao Vivo");
-        }
-      };
-
-      // Identificadores visuais da API
-      const logoCompeticao = evento.competition_logo || evento.event_logo || '⚽';
-      const statusAoVivo = evento.status === 'live' || evento.status === 'ao_vivo' ? '🔴 AO VIVO' : (evento.horario || 'HOJE');
-      const badgeCor = statusAoVivo.includes('AO VIVO') ? '#ef4444' : '#2563eb';
-
-      const renderLogo = logoCompeticao.startsWith('http') 
-        ? `<img src="${logoCompeticao}" style="width:30px; height:30px; object-fit:contain;">`
-        : `<span style="font-size:1.2rem;">${logoCompeticao}</span>`;
-
-      card.innerHTML = `
-        <div style="display:flex; align-items:center; gap:12px;">
-          <div style="background:#0f172a; width:45px; height:45px; border-radius:8px; display:flex; align-items:center; justify-content:center; border:1px solid #1e293b;">
-            ${renderLogo}
-          </div>
-          <div>
-            <strong style="color:#fff; font-size:0.9rem; display:block;">${evento.title || evento.nome || 'Partida Esportiva'}</strong>
-            <span style="font-size:0.75rem; color:#64748b;">${evento.modalidade || evento.competicao || 'Futebol'}</span>
-          </div>
-        </div>
-        <span style="background:${badgeCor}; color:#fff; font-size:0.65rem; padding:4px 8px; border-radius:4px; font-weight:bold; letter-spacing:0.5px;">
-          ${statusAoVivo}
-        </span>
-      `;
-
-      grid.appendChild(card);
-    });
-
   } catch (error) {
-    console.error("Erro ao carregar a API de esportes:", error);
-    grid.innerHTML = "<p style='color:#ef4444; text-align:center; grid-column: 1/-1;'>Erro ao carregar a lista de eventos esportivos.</p>";
+    console.warn("Erro ao buscar API via Proxy, usando canais de backup:", error);
   }
-}
 
+  // Se a API não retornar nada ou falhar, carrega os canais de backup
+  if (!Array.isArray(eventos) || eventos.length === 0) {
+    eventos = CANAIS_FIXOS_BACKUP;
+  }
+
+  grid.innerHTML = "";
+
+  eventos.forEach(evento => {
+    const card = document.createElement("div");
+    card.style.cssText = `
+      background: #18222d;
+      border-radius: 10px;
+      padding: 12px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      border: 1px solid #283747;
+      transition: transform 0.2s, border-color 0.2s;
+    `;
+
+    card.onmouseover = () => { card.style.borderColor = "#22c55e"; card.style.transform = "translateY(-2px)"; };
+    card.onmouseout = () => { card.style.borderColor = "#283747"; card.style.transform = "translateY(0)"; };
+
+    // Ao clicar, envia para a função do player
+    card.onclick = () => {
+      fecharEsportes();
+      
+      const targetUrl = evento.play_event_url || (evento.slug ? `eventos/${evento.slug}` : "futebol");
+      const cleanEndpoint = targetUrl.replace('https://superflixapi.beer/', '');
+      
+      if (typeof abrirPlayerCustom === "function") {
+        abrirPlayerCustom(cleanEndpoint, evento.title || evento.nome || "Futebol Ao Vivo");
+      } else if (typeof abrirPlayer === "function") {
+        abrirPlayer(cleanEndpoint, evento.title || evento.nome || "Futebol Ao Vivo", "esporte");
+      }
+    };
+
+    const logoCompeticao = evento.competition_logo || evento.event_logo || '⚽';
+    const statusText = evento.status === 'live' || evento.status === 'ao_vivo' || evento.status === 'AO VIVO' ? '🔴 AO VIVO' : (evento.horario || 'HOJE');
+    const badgeCor = statusText.includes('AO VIVO') ? '#ef4444' : '#2563eb';
+
+    const renderLogo = (typeof logoCompeticao === 'string' && logoCompeticao.startsWith('http')) 
+      ? `<img src="${logoCompeticao}" style="width:30px; height:30px; object-fit:contain;">`
+      : `<span style="font-size:1.2rem;">${logoCompeticao}</span>`;
+
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="background:#0f172a; width:45px; height:45px; border-radius:8px; display:flex; align-items:center; justify-content:center; border:1px solid #1e293b;">
+          ${renderLogo}
+        </div>
+        <div>
+          <strong style="color:#fff; font-size:0.9rem; display:block;">${evento.title || evento.nome || 'Partida Esportiva'}</strong>
+          <span style="font-size:0.75rem; color:#64748b;">${evento.modalidade || evento.competicao || 'Futebol'}</span>
+        </div>
+      </div>
+      <span style="background:${badgeCor}; color:#fff; font-size:0.65rem; padding:4px 8px; border-radius:4px; font-weight:bold; letter-spacing:0.5px;">
+        ${statusText}
+      </span>
+    `;
+
+    grid.appendChild(card);
+  });
+}
 
 // 9. BUSCA MULTI-MÍDIA
 async function buscarMidia(event) {
