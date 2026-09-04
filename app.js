@@ -232,7 +232,7 @@ function abrirPlayerCustom(caminhoEmbed, titulo) {
         style="width: 100%; height: 70%; border: none;" 
         allow="autoplay; fullscreen"
         allowfullscreen 
-        sandbox="allow-scripts allow-same-origin allow-forms"
+        
         scrolling="no">
       </iframe>
     </div>
