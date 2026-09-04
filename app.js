@@ -3,6 +3,23 @@ const BASE_URL = "https://api.themoviedb.org/3";
 const IMG_URL = "https://image.tmdb.org/t/p/w500";
 const SUPERFLIX_URL = "https://myembed.biz";
 
+// ============================================================================
+// BLOQUEADOR DE POP-UPS E NOVAS GUIAS
+// Intercepta tentativas de scripts de terceiros abrirem novas janelas ou links
+// ============================================================================
+(function aplicarBloqueioAds() {
+  // Sobrescreve a função nativa window.open para impedir a abertura de novas abas
+  window.open = function () {
+    console.warn("Tentativa de abertura de nova guia/pop-up bloqueada.");
+    return null;
+  };
+
+  // Previne a abertura involuntária de esquemas de apps externos (ex: intent:// ou market://)
+  window.addEventListener("beforeunload", function (e) {
+    // Mantém a navegação na página atual
+  });
+})();
+
 // 1. CARREGAR FILMES POPULARES
 async function carregarFilmesEmAlta() {
   const container = document.getElementById("filmes-grid");
@@ -72,7 +89,6 @@ async function buscarMidia() {
   }
 }
 
-// 4. ABRIR PLAYER DO SUPERFLIX COM RESTRIÇÃO DE POP-UPS (SANDBOX)
 // 4. ABRIR PLAYER DO SUPERFLIX
 function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
   let modal = document.getElementById("modal-player");
@@ -99,6 +115,7 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
 
       <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; background: #000;">
         <iframe 
+          id="iframe-player"
           src="${playerUrl}" 
           style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" 
           allowfullscreen 
