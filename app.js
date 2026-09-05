@@ -318,18 +318,53 @@ function abrirHistorico() {
 // ============================================================================
 
 // Usamos um Proxy CORS para contornar o bloqueio do navegador na Vercel
-const API_EVENTOS_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://superflixapi.beer/lista?category=eventos&format=json");
+// ============================================================================
+// 8. TELA DE CANAIS ESPORTIVOS & EVENTOS AO VIVO
+// ============================================================================
 
-// Lista de backup (Canais 24h) para exibir caso a API esteja sem eventos ou falhe
-const CANAIS_FIXOS_BACKUP = [
-  { title: "Futebol Ao Vivo (Grade Geral)", modalidade: "Todos os Jogos", play_event_url: "futebol", status: "AO VIVO" },
-  { title: "Premiere Clubes HD", modalidade: "Premiere 24h", play_event_url: "canal/premiere-clubes", status: "AO VIVO" },
-  { title: "Premiere 1 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "canal/premiere-1", status: "AO VIVO" },
-  { title: "SporTV 1 HD", modalidade: "SporTV", play_event_url: "canal/sportv-1", status: "AO VIVO" },
-  { title: "SporTV 2 HD", modalidade: "SporTV", play_event_url: "canal/sportv-2", status: "AO VIVO" },
-  { title: "ESPN Brasil HD", modalidade: "ESPN / Star+", play_event_url: "canal/espn", status: "AO VIVO" },
-  { title: "TNT Sports HD", modalidade: "Champions / Max", play_event_url: "canal/tnt-sports", status: "AO VIVO" },
-  { title: "CazéTV Ao Vivo", modalidade: "YouTube / Streaming", play_event_url: "canal/cazetv", status: "AO VIVO" }
+const CANAIS_ESPN = [
+  { title: "ESPN HD", modalidade: "ESPN / Star+", play_event_url: "https://rdcanais.net/espn", status: "AO VIVO" },
+  { title: "ESPN 2 HD", modalidade: "ESPN / Star+", play_event_url: "https://rdcanais.net/espn2", status: "AO VIVO" },
+  { title: "ESPN 3 HD", modalidade: "ESPN / Star+", play_event_url: "https://rdcanais.net/espn3", status: "AO VIVO" },
+  { title: "ESPN 4 HD", modalidade: "ESPN / Star+", play_event_url: "https://rdcanais.net/espn4", status: "AO VIVO" },
+  { title: "ESPN 5 HD", modalidade: "ESPN / Star+", play_event_url: "https://rdcanais.net/espn5", status: "AO VIVO" },
+  { title: "ESPN 6 HD", modalidade: "ESPN / Star+", play_event_url: "https://rdcanais.net/espn6", status: "AO VIVO" }
+];
+
+const CANAIS_PARAMOUNT = [
+  { title: "Paramount+ HD", modalidade: "Libertadores / Sul-Americana", play_event_url: "https://rdcanais.net/paramountplus", status: "AO VIVO" },
+  { title: "Paramount+ 2 HD", modalidade: "Libertadores / Sul-Americana", play_event_url: "https://rdcanais.net/paramountplus2", status: "AO VIVO" },
+  { title: "Paramount+ 3 HD", modalidade: "Libertadores / Sul-Americana", play_event_url: "https://rdcanais.net/paramountplus3", status: "AO VIVO" },
+  { title: "Paramount+ 4 HD", modalidade: "Libertadores / Sul-Americana", play_event_url: "https://rdcanais.net/paramountplus4", status: "AO VIVO" }
+];
+
+const CANAIS_PREMIERE = [
+  { title: "Premiere Clubes HD", modalidade: "Brasileirão / Estaduais", play_event_url: "https://rdcanais.net/premiereclubes", status: "AO VIVO" },
+  { title: "Premiere 2 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "https://rdcanais.net/premiere2", status: "AO VIVO" },
+  { title: "Premiere 3 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "https://rdcanais.net/premiere3", status: "AO VIVO" },
+  { title: "Premiere 4 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "https://rdcanais.net/premiere4", status: "AO VIVO" },
+  { title: "Premiere 5 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "https://rdcanais.net/premiere5", status: "AO VIVO" },
+  { title: "Premiere 6 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "https://rdcanais.net/premiere6", status: "AO VIVO" },
+  { title: "Premiere 7 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "https://rdcanais.net/premiere7", status: "AO VIVO" },
+  { title: "Premiere 8 HD", modalidade: "Brasileirão / Estaduais", play_event_url: "https://rdcanais.net/premiere8", status: "AO VIVO" }
+];
+
+const CANAIS_MAX = [
+  { title: "Max 1 HD", modalidade: "Champions League / Max", play_event_url: "https://v1.rdse.lol/max1", status: "AO VIVO" },
+  { title: "Max 2 HD", modalidade: "Champions League / Max", play_event_url: "https://v1.rdse.lol/max2", status: "AO VIVO" },
+  { title: "Max 3 HD", modalidade: "Champions League / Max", play_event_url: "https://v1.rdse.lol/max3", status: "AO VIVO" },
+  { title: "Max 4 HD", modalidade: "Champions League / Max", play_event_url: "https://v1.rdse.lol/max4", status: "AO VIVO" },
+  { title: "Max 5 HD", modalidade: "Champions League / Max", play_event_url: "https://v1.rdse.lol/max5", status: "AO VIVO" },
+  { title: "Max 6 HD", modalidade: "Champions League / Max", play_event_url: "https://v1.rdse.lol/max6", status: "AO VIVO" },
+  { title: "Max 7 HD", modalidade: "Champions League / Max", play_event_url: "https://v1.rdse.lol/max7", status: "AO VIVO" }
+];
+
+// Unificação de todos os canais cadastrados
+const TODOS_OS_CANAIS = [
+  ...CANAIS_ESPN,
+  ...CANAIS_PARAMOUNT,
+  ...CANAIS_PREMIERE,
+  ...CANAIS_MAX
 ];
 
 function abrirCanaisEsportivos() {
@@ -345,87 +380,58 @@ function fecharEsportes() {
   if (modal) modal.style.display = "none";
 }
 
-async function carregarEventosEsportivos() {
+function carregarEventosEsportivos() {
   const grid = document.getElementById("grid-esportes");
   if (!grid) return;
 
-  grid.innerHTML = "<p style='color:#aaa; text-align:center; grid-column: 1/-1;'>Carregando transmissões ao vivo...</p>";
-
-  let eventos = [];
-
-  try {
-    const res = await fetch(API_EVENTOS_URL);
-    if (res.ok) {
-      eventos = await res.json();
-    }
-  } catch (error) {
-    console.warn("Erro ao buscar API via Proxy, usando canais de backup:", error);
-  }
-
-  // Se a API não retornar nada ou falhar, carrega os canais de backup
-  if (!Array.isArray(eventos) || eventos.length === 0) {
-    eventos = CANAIS_FIXOS_BACKUP;
-  }
-
   grid.innerHTML = "";
 
-  eventos.forEach(evento => {
+  TODOS_OS_CANAIS.forEach(canal => {
     const card = document.createElement("div");
     card.style.cssText = `
-      background: #18222d;
-      border-radius: 10px;
-      padding: 12px 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      border: 1px solid #283747;
-      transition: transform 0.2s, border-color 0.2s;
+      background: #18222d; border-radius: 10px; padding: 12px 15px;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; border: 1px solid #283747; transition: transform 0.2s, border-color 0.2s;
     `;
 
     card.onmouseover = () => { card.style.borderColor = "#22c55e"; card.style.transform = "translateY(-2px)"; };
     card.onmouseout = () => { card.style.borderColor = "#283747"; card.style.transform = "translateY(0)"; };
 
-    // Ao clicar, envia para a função do player
     card.onclick = () => {
       fecharEsportes();
       
-      const targetUrl = evento.play_event_url || (evento.slug ? `eventos/${evento.slug}` : "futebol");
-      const cleanEndpoint = targetUrl.replace('https://superflixapi.beer/', '');
-      
+      // Caso a função aceite URL inteira ou formato relativo
       if (typeof abrirPlayerCustom === "function") {
-        abrirPlayerCustom(cleanEndpoint, evento.title || evento.nome || "Futebol Ao Vivo");
+        abrirPlayerCustom(canal.play_event_url, canal.title);
       } else if (typeof abrirPlayer === "function") {
-        abrirPlayer(cleanEndpoint, evento.title || evento.nome || "Futebol Ao Vivo", "esporte");
+        abrirPlayer(canal.play_event_url, canal.title, "esporte");
       }
     };
 
-    const logoCompeticao = evento.competition_logo || evento.event_logo || '⚽';
-    const statusText = evento.status === 'live' || evento.status === 'ao_vivo' || evento.status === 'AO VIVO' ? '🔴 AO VIVO' : (evento.horario || 'HOJE');
-    const badgeCor = statusText.includes('AO VIVO') ? '#ef4444' : '#2563eb';
-
-    const renderLogo = (typeof logoCompeticao === 'string' && logoCompeticao.startsWith('http')) 
-      ? `<img src="${logoCompeticao}" style="width:30px; height:30px; object-fit:contain;">`
-      : `<span style="font-size:1.2rem;">${logoCompeticao}</span>`;
+    let icone = "⚽";
+    if (canal.title.includes("ESPN")) icone = "📺";
+    if (canal.title.includes("Paramount")) icone = "🎬";
+    if (canal.title.includes("Max")) icone = "🏆";
 
     card.innerHTML = `
       <div style="display:flex; align-items:center; gap:12px;">
-        <div style="background:#0f172a; width:45px; height:45px; border-radius:8px; display:flex; align-items:center; justify-content:center; border:1px solid #1e293b;">
-          ${renderLogo}
+        <div style="background:#0f172a; width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; border:1px solid #1e293b;">
+          ${icone}
         </div>
         <div>
-          <strong style="color:#fff; font-size:0.9rem; display:block;">${evento.title || evento.nome || 'Partida Esportiva'}</strong>
-          <span style="font-size:0.75rem; color:#64748b;">${evento.modalidade || evento.competicao || 'Futebol'}</span>
+          <strong style="color:#fff; font-size:0.85rem; display:block;">${canal.title}</strong>
+          <span style="font-size:0.75rem; color:#64748b;">${canal.modalidade}</span>
         </div>
       </div>
-      <span style="background:${badgeCor}; color:#fff; font-size:0.65rem; padding:4px 8px; border-radius:4px; font-weight:bold; letter-spacing:0.5px;">
-        ${statusText}
+      <span style="background:#ef4444; color:#fff; font-size:0.65rem; padding:4px 8px; border-radius:4px; font-weight:bold;">
+        ${canal.status}
       </span>
     `;
 
     grid.appendChild(card);
   });
 }
+
 
 // 9. BUSCA MULTI-MÍDIA
 // ============================================================================
