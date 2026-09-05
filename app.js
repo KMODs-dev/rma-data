@@ -322,6 +322,10 @@ function abrirHistorico() {
 // 8. TELA DE CANAIS ESPORTIVOS & EVENTOS AO VIVO
 // ============================================================================
 
+// ============================================================================
+// 8. TELA DE CANAIS ESPORTIVOS & IFRAME BÁSICO
+// ============================================================================
+
 const CANAIS_ESPN = [
   { title: "ESPN HD", modalidade: "ESPN / Star+", play_event_url: "https://rdcanais.net/espn", status: "AO VIVO" },
   { title: "ESPN 2 HD", modalidade: "ESPN / Star+", play_event_url: "https://rdcanais.net/espn2", status: "AO VIVO" },
@@ -359,13 +363,56 @@ const CANAIS_MAX = [
   { title: "Max 7 HD", modalidade: "Champions League / Max", play_event_url: "https://v1.rdse.lol/max7", status: "AO VIVO" }
 ];
 
-// Unificação de todos os canais cadastrados
 const TODOS_OS_CANAIS = [
   ...CANAIS_ESPN,
   ...CANAIS_PARAMOUNT,
   ...CANAIS_PREMIERE,
   ...CANAIS_MAX
 ];
+
+// Função que abre a URL no Iframe Básico
+function abrirIframeBasico(url, titulo) {
+  let modal = document.getElementById("modal-iframe-basico");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "modal-iframe-basico";
+    document.body.appendChild(modal);
+  }
+
+  modal.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
+    align-items: center; z-index: 99999; padding: 15px; box-sizing: border-box;
+  `;
+
+  modal.innerHTML = `
+    <div style="width: 100%; max-width: 900px; background: #000; border-radius: 8px; overflow: hidden; position: relative;">
+      
+      <!-- Topo com título e fechar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #111; border-bottom: 1px solid #222;">
+        <span style="color: #fff; font-size: 0.9rem; font-weight: bold;">📺 ${titulo}</span>
+        <button onclick="fecharIframeBasico()" style="background: #e50914; color: #fff; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Sair X</button>
+      </div>
+
+      <!-- Estrutura Responsiva do Iframe Básico -->
+      <div style="position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;">
+        <iframe src="${url}" title="${titulo}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+      </div>
+
+    </div>
+  `;
+
+  modal.style.display = "flex";
+}
+
+function fecharIframeBasico() {
+  const modal = document.getElementById("modal-iframe-basico");
+  if (modal) {
+    modal.innerHTML = "";
+    modal.style.display = "none";
+  }
+}
 
 function abrirCanaisEsportivos() {
   const modal = document.getElementById("modal-esportes");
@@ -399,13 +446,7 @@ function carregarEventosEsportivos() {
 
     card.onclick = () => {
       fecharEsportes();
-      
-      // Caso a função aceite URL inteira ou formato relativo
-      if (typeof abrirPlayerCustom === "function") {
-        abrirPlayerCustom(canal.play_event_url, canal.title);
-      } else if (typeof abrirPlayer === "function") {
-        abrirPlayer(canal.play_event_url, canal.title, "esporte");
-      }
+      abrirIframeBasico(canal.play_event_url, canal.title);
     };
 
     let icone = "⚽";
@@ -431,6 +472,7 @@ function carregarEventosEsportivos() {
     grid.appendChild(card);
   });
 }
+
 
 
 // 9. BUSCA MULTI-MÍDIA
