@@ -201,13 +201,6 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
 
 function abrirPlayerCustom(caminhoEmbed, titulo) {
   let modal = document.getElementById("modal-player");
-  // Coloque esta linha dentro da sua função abrirPlayerCustom()
-window.onbeforeunload = function () {
-  return "Tem certeza que deseja sair do reprodutor?";
-};
-
-// E esta linha dentro da função fecharPlayer()
-
 
   if (!modal) {
     modal = document.createElement("div");
@@ -224,27 +217,30 @@ window.onbeforeunload = function () {
   const playerUrl = `${SUPERFLIX_URL}/${caminhoEmbed}`;
 
   modal.innerHTML = `
-    <!-- Barra Superior Flutuante -->
     <div style="position: absolute; top: 10px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10000; pointer-events: auto;">
       <h3 style="color: #fff; font-size: 0.9rem; text-shadow: 1px 1px 3px #000; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 4px; margin: 0;">🎬 ${titulo}</h3>
       <button onclick="fecharPlayer()" style="background: #E50914; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">Sair X</button>
     </div>
 
-    <!-- Container do Vídeo em 100% -->
     <div style="width: 100%; height: 100%; position: relative; background: #000;">
       <iframe 
         id="iframe-player"
         src="${playerUrl}" 
         style="width: 100%; height: 100%; border: none;" 
-        allow="autoplay; fullscreen"
+        allow="autoplay; fullscreen; encrypted-media"
         allowfullscreen 
-        
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         scrolling="no">
       </iframe>
     </div>
   `;
 
   modal.style.display = "flex";
+
+  // Previne que a sua página principal seja redirecionada
+  window.onbeforeunload = function () {
+    return "Deseja realmente sair?";
+  };
 
   // Entra em Tela Cheia
   if (modal.requestFullscreen) {
@@ -258,6 +254,7 @@ window.onbeforeunload = function () {
     screen.orientation.lock("landscape").catch(() => {});
   }
 }
+
 
 
 
