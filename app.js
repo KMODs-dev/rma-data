@@ -371,6 +371,7 @@ const TODOS_OS_CANAIS = [
 ];
 
 // Função que abre a URL no Iframe Básico
+// Função que abre a URL no Iframe Básico na Horizontal com Sandbox Anti-Ads
 function abrirIframeBasico(url, titulo) {
   let modal = document.getElementById("modal-iframe-basico");
 
@@ -380,30 +381,46 @@ function abrirIframeBasico(url, titulo) {
     document.body.appendChild(modal);
   }
 
+  // Ocupa 100% da tela do aparelho
   modal.style.cssText = `
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
-    align-items: center; z-index: 99999; padding: 15px; box-sizing: border-box;
+    background: #000; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; z-index: 99999;
   `;
 
   modal.innerHTML = `
-    <div style="width: 100%; max-width: 900px; background: #000; border-radius: 8px; overflow: hidden; position: relative;">
-      
-      <!-- Topo com título e fechar -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #111; border-bottom: 1px solid #222;">
-        <span style="color: #fff; font-size: 0.9rem; font-weight: bold;">📺 ${titulo}</span>
-        <button onclick="fecharIframeBasico()" style="background: #e50914; color: #fff; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Sair X</button>
-      </div>
+    <!-- Topo Flutuante com Botão Sair -->
+    <div style="position: absolute; top: 10px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100000; pointer-events: auto;">
+      <span style="color: #fff; font-size: 0.85rem; font-weight: bold; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 4px;">📺 ${titulo}</span>
+      <button onclick="fecharIframeBasico()" style="background: #e50914; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">Sair X</button>
+    </div>
 
-      <!-- Estrutura Responsiva do Iframe Básico -->
-      <div style="position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;">
-        <iframe src="${url}" title="${titulo}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>
-      </div>
-
+    <!-- Container em Horizontal Cheia (100% de largura e altura) -->
+    <div style="position: relative; width: 100%; height: 100%; overflow: hidden; background: #000;">
+      <iframe 
+        src="${url}" 
+        title="${titulo}" 
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" 
+        allowfullscreen 
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation">
+      </iframe>
     </div>
   `;
 
   modal.style.display = "flex";
+
+  // Força Modo Tela Cheia
+  if (modal.requestFullscreen) {
+    modal.requestFullscreen().catch(() => {});
+  } else if (modal.webkitRequestFullscreen) {
+    modal.webkitRequestFullscreen();
+  }
+
+  // Trava a Orientação na Horizontal em Celulares
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock("landscape").catch(() => {});
+  }
 }
 
 function fecharIframeBasico() {
@@ -412,7 +429,22 @@ function fecharIframeBasico() {
     modal.innerHTML = "";
     modal.style.display = "none";
   }
+
+  // Sai do Modo Tela Cheia
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+
+  // Destrava a orientação de tela do celular
+  if (screen.orientation && screen.orientation.unlock) {
+    screen.orientation.unlock();
+  }
 }
+
 
 function abrirCanaisEsportivos() {
   const modal = document.getElementById("modal-esportes");
