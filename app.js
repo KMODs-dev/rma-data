@@ -201,6 +201,13 @@ function abrirPlayer(tmdbId, titulo, tipo = 'filme') {
 
 function abrirPlayerCustom(caminhoEmbed, titulo) {
   let modal = document.getElementById("modal-player");
+  // Coloque esta linha dentro da sua função abrirPlayerCustom()
+window.onbeforeunload = function () {
+  return "Tem certeza que deseja sair do reprodutor?";
+};
+
+// E esta linha dentro da função fecharPlayer()
+
 
   if (!modal) {
     modal = document.createElement("div");
@@ -231,7 +238,7 @@ function abrirPlayerCustom(caminhoEmbed, titulo) {
         style="width: 100%; height: 100%; border: none;" 
         allow="autoplay; fullscreen"
         allowfullscreen 
-        sandbox="allow-scripts allow-same-origin allow-forms"
+        
         scrolling="no">
       </iframe>
     </div>
@@ -259,6 +266,7 @@ function fecharPlayer() {
   if (modal) {
     modal.innerHTML = "";
     modal.style.display = "none";
+    window.onbeforeunload = null;
   }
 
   // Sai do modo tela cheia do navegador
